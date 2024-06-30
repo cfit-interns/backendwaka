@@ -3,8 +3,8 @@ import createHttpError from "http-errors";
 import mongoose from "mongoose";
 import RosterModel from "../models/roster";
 
+// Handler to get all roster entries
 export const getRosters: RequestHandler = async (req, res, next) => {
-
     try {
         const rosters = await RosterModel.find().exec();
         res.status(200).json(rosters);
@@ -13,6 +13,7 @@ export const getRosters: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to get a specific roster entry by its ID
 export const getRoster: RequestHandler = async (req, res, next) => {
     const rosterId = req.params.rosterId;
 
@@ -33,6 +34,7 @@ export const getRoster: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Interface for the request body of createRoster handler
 interface CreateRosterBody {
     date?: string, 
     driverName?: string, 
@@ -43,6 +45,7 @@ interface CreateRosterBody {
     availabilityStatus?: string[],
 }
 
+// Handler to create a new roster entry
 export const createRoster: RequestHandler<unknown, unknown, CreateRosterBody, unknown> = async (req, res, next) => {
     const date = req.body.date;
     const driverName = req.body.driverName;
@@ -73,10 +76,12 @@ export const createRoster: RequestHandler<unknown, unknown, CreateRosterBody, un
     }
 };
 
+// Interface for the request parameters of updateRoster handler
 interface UpdateRosterParams {
     rosterId: string,
 }
 
+// Interface for the request body of updateRoster handler
 interface UpdateRosterBody {
     date?: string, 
     driverName?: string, 
@@ -87,6 +92,7 @@ interface UpdateRosterBody {
     availabilityStatus?: string[],
 }
 
+// Handler to update an existing roster entry
 export const updateRoster: RequestHandler<UpdateRosterParams, unknown, UpdateRosterBody, unknown> = async (req, res, next) => {
     const rosterId = req.params.rosterId;
     const newDate = req.body.date;
@@ -127,6 +133,7 @@ export const updateRoster: RequestHandler<UpdateRosterParams, unknown, UpdateRos
     }
 };
 
+// Handler to delete a roster entry by its ID
 export const deleteRoster: RequestHandler = async (req, res, next) => {
     const rosterId = req.params.rosterId;
 

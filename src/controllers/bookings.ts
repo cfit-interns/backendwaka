@@ -8,6 +8,7 @@ import env from "../util/validateEnv";
 import nodemailer from "nodemailer";
 import { signJWT } from "../util/jwt.utils";
 
+// Configure nodemailer with SMTP settings
 const config = {
     host: env.SMTP_SERVER_ADDRESS,
     port: env.SMTP_PORT,
@@ -18,8 +19,10 @@ const config = {
     },
 };
 
+// Create a transporter object using the default SMTP transport
 const transporter = nodemailer.createTransport(config);
 
+// Handler to get bookings for the authenticated user
 export const getBookings: RequestHandler = async (req, res, next) => {
     const authenticatedUserId = req.session.userId;
 
@@ -33,18 +36,16 @@ export const getBookings: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to get all bookings with optional search and pagination
 export const getAllBookings: RequestHandler = async (req, res, next) => {
     try {
-        // const bookings = await BookingModel.find().exec();
-        // res.status(200).json(bookings);
-        // 获取查询参数
-        // 获取查询参数
+        // Retrieve query parameters
         const { name, limit, page, date } = req.body;
 
-        // 构建搜索条件
+        // Construct search criteria
         let searchCriteria: any = {};
         if (name) {
-            searchCriteria.firstName = { $regex: new RegExp(name as string, 'i') };  // 使用正则表达式实现模糊搜索
+            searchCriteria.firstName = { $regex: new RegExp(name as string, 'i') };  // Use regular expression for fuzzy search
         }
 
         if (date) {
@@ -52,21 +53,21 @@ export const getAllBookings: RequestHandler = async (req, res, next) => {
             searchCriteria.date = targetDate;
         }
 
-        // 计算分页参数
+        // Calculate pagination parameters
         const limitNum = parseInt(limit as string, 10);
         const pageNum = parseInt(page as string, 10);
         const skip = (pageNum - 1) * limitNum;
 
-        // 执行查询
+        // Execute query
         const bookings = await BookingModel.find(searchCriteria)
           .skip(skip)
           .limit(limitNum)
           .exec();
 
-        // 获取总数
+        // Get total count
         const total = await BookingModel.countDocuments(searchCriteria).exec();
 
-        // 返回结果
+        // Return results
         res.status(200).json({
             total,
             page: pageNum,
@@ -78,6 +79,7 @@ export const getAllBookings: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to get a specific booking by ID for the authenticated user
 export const getBooking: RequestHandler = async (req, res, next) => {
     const bookingId = req.params.bookingId;
     const authenticatedUserId = req.session.userId;
@@ -105,6 +107,7 @@ export const getBooking: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Interface for the request body of createBooking handler
 interface CreateBookingBody {
     firstName?: string,
     lastName?: string,
@@ -122,6 +125,7 @@ interface CreateBookingBody {
     additionalNotes?: string,
 }
 
+// Handler to create a new booking
 export const createBooking: RequestHandler<unknown, unknown, CreateBookingBody, unknown> = async (req, res, next) => {
     const firstName = req.body.firstName;
     const lastName = req.body.lastName;
@@ -189,8 +193,8 @@ export const createBooking: RequestHandler<unknown, unknown, CreateBookingBody, 
         const accessToken = signJWT({ email: newBooking }, "24h");
 
         const data = await transporter.sendMail({
-            "from": "miskan22@student.wintec.ac.nz",
-            "to": "miskan22@student.wintec.ac.nz",
+            "from": "xinbai24@student.wintec.ac.nz",
+            "to": "xinbai24@student.wintec.ac.nz",
             "subject": "Your Booking Request",
             "html": `<p>Dear ${firstName}, ${lastName}</p>
             <p>We would love to inform you that your booking request with 
@@ -204,8 +208,8 @@ export const createBooking: RequestHandler<unknown, unknown, CreateBookingBody, 
         });
 
         const mail = await transporter.sendMail({
-            "from": "miskan22@student.wintec.ac.nz",
-            "to": "miskan22@student.wintec.ac.nz",
+            "from": "xinbai24@student.wintec.ac.nz",
+            "to": "xinbai24@student.wintec.ac.nz",
             "subject": "User's Booking Request",
             "html": `<p>${firstName}, ${lastName} has been made a booking request with 
             Waka Eastern Bay Community Transport.</p>
@@ -223,6 +227,7 @@ export const createBooking: RequestHandler<unknown, unknown, CreateBookingBody, 
     }
 };
 
+// Handler to delete a booking for the authenticated user
 export const deleteUserBooking: RequestHandler = async (req, res, next) => {
     const bookingId = req.params.bookingId;
     const authenticatedUserId = req.session.userId;
@@ -252,6 +257,7 @@ export const deleteUserBooking: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to delete a booking by staff
 export const deleteStaffBooking: RequestHandler = async (req, res, next) => {
     const bookingId = req.params.bookingId;
 
@@ -273,6 +279,7 @@ export const deleteStaffBooking: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to suggest bookings based on date
 export const suggestBooking: RequestHandler = async (req, res, next) => {
     const date = req.query.date;
 
@@ -281,13 +288,13 @@ export const suggestBooking: RequestHandler = async (req, res, next) => {
         if (date) {
             searchCriteria.date = date;
         }
-        // 查询数据库中符合条件的数据
+        // Query the database for matching records
         const bookings = await RosterModel.find(searchCriteria).exec();
 
-        // 返回查询结果
+        // Return the query results
         res.status(200).json(bookings);
 
-    }catch (error) {
+    } catch (error) {
         next(error);
     }
 

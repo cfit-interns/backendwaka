@@ -4,31 +4,33 @@ import BookingModel from "../models/booking";
 import mongoose from "mongoose";
 import createHttpError from "http-errors";
 
+// Handler to get the number of bookings for each date in the provided array of dates
 export const getMonthCalendars: RequestHandler = async (req, res, next) => {
     try {
         const datesToSearch = req.body.dateArr as string[];
-        // 查询符合条件的数据条目数量
+        
+        // Aggregate the number of bookings for each date
         const aggregationResult = await BookingModel.aggregate([
             {
                 $match: {
-                    date: { $in: datesToSearch } // 使用 $in 操作符匹配 datesToSearch 数组中的日期
+                    date: { $in: datesToSearch } // Use $in operator to match dates in the datesToSearch array
                 }
             },
             {
                 $group: {
-                    _id: '$date',  // 按日期分组
-                    count: { $sum: 1 }  // 计算每个日期的文档数量
+                    _id: '$date',  // Group by date
+                    count: { $sum: 1 }  // Count the number of documents for each date
                 }
             }
         ]);
 
-        // 构造包含所有目标日期的结果数组，并将计数初始化为0
+        // Create an array containing all target dates with count initialized to 0
         const result = datesToSearch.map(date => ({
             date,
             count: 0
         }));
 
-        // 更新结果数组中实际存在的日期的计数
+        // Update the result array with the actual counts for the dates that exist in the aggregation result
         aggregationResult.forEach(item => {
             const index = result.findIndex(r => r.date === item._id);
             if (index !== -1) {
@@ -42,6 +44,7 @@ export const getMonthCalendars: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to get all calendar entries
 export const getCalendars: RequestHandler = async (req, res, next) => {
     try {
         const calendars = await CalendarModel.find().exec();
@@ -51,6 +54,7 @@ export const getCalendars: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to get a specific calendar entry by its ID
 export const getCalendar: RequestHandler = async (req, res, next) => {
     const calendarId = req.params.calendarId;
 
@@ -71,6 +75,7 @@ export const getCalendar: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Interface for the request body of createCalendar handler
 interface CreateCalendarBody {
     date?: string,
     title?: string,
@@ -80,6 +85,7 @@ interface CreateCalendarBody {
     endTime: string,
 }
 
+// Handler to create a new calendar entry
 export const createCalendar: RequestHandler<unknown, unknown, CreateCalendarBody, unknown> = async (req, res, next) => {
 
     const date = req.body.date;
@@ -109,10 +115,12 @@ export const createCalendar: RequestHandler<unknown, unknown, CreateCalendarBody
     }
 };
 
+// Interface for the request parameters of updateCalendar handler
 interface UpdateCalendarParams {
     calendarId: string,
 }
 
+// Interface for the request body of updateCalendar handler
 interface UpdateCalendarBody {
     date?: string,
     title?: string,
@@ -122,6 +130,7 @@ interface UpdateCalendarBody {
     endTime: string,
 }
 
+// Handler to update an existing calendar entry
 export const updateCalendar: RequestHandler<UpdateCalendarParams, unknown, UpdateCalendarBody, unknown> = async (req, res, next) => {
     const calendarId = req.params.calendarId;
     const newDate = req.body.date;
@@ -160,6 +169,7 @@ export const updateCalendar: RequestHandler<UpdateCalendarParams, unknown, Updat
     }
 };
 
+// Handler to delete a calendar entry by its ID
 export const deleteCalendar: RequestHandler = async (req, res, next) => {
     const calendarId = req.params.calendarId;
 

@@ -6,6 +6,7 @@ import nodemailer from "nodemailer";
 import RegisterModel from "../models/register";
 import bcrypt from "bcrypt";
 
+// Configure nodemailer with SMTP settings
 const config = {
     host: env.SMTP_SERVER_ADDRESS,
     port: env.SMTP_PORT,
@@ -16,8 +17,10 @@ const config = {
     },
 };
 
+// Create a transporter object using the default SMTP transport
 const transporter = nodemailer.createTransport(config);
 
+// Handler to get all registration entries
 export const getRegisters: RequestHandler = async (req, res, next) => {
     try {
         const registers = await RegisterModel.find().exec();
@@ -27,6 +30,7 @@ export const getRegisters: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Handler to get a specific registration entry by its ID
 export const getRegister: RequestHandler = async (req, res, next) => {
     const registerId = req.params.registerId;
 
@@ -47,6 +51,7 @@ export const getRegister: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Interface for the request body of createRegister handler
 interface CreateRegisterBody {
     username?: string,
     password?: string,
@@ -69,6 +74,7 @@ interface CreateRegisterBody {
     emergencyRelationship?: string,
 }
 
+// Handler to create a new registration entry
 export const createRegister: RequestHandler<unknown, unknown, CreateRegisterBody, unknown> = async (req, res, next) => {
     const username = req.body.username;
     const passwordRaw = req.body.password;
@@ -83,24 +89,25 @@ export const createRegister: RequestHandler<unknown, unknown, CreateRegisterBody
     const altPhoneNumber = req.body.altPhoneNumber;
     const gender = req.body.gender;
     const ethnicity = req.body.ethnicity;
-    const disability = req.body.disability
-    const disabilityDetails = req.body.disabilityDetails
-    const assistance = req.body.assistance
-    const emergencyName = req.body.emergencyName
-    const emergencyPhone = req.body.emergencyPhone
-    const emergencyRelationship = req.body.emergencyRelationship
+    const disability = req.body.disability;
+    const disabilityDetails = req.body.disabilityDetails;
+    const assistance = req.body.assistance;
+    const emergencyName = req.body.emergencyName;
+    const emergencyPhone = req.body.emergencyPhone;
+    const emergencyRelationship = req.body.emergencyRelationship;
 
     try {
         if (!username || !passwordRaw || !firstName || !lastName || !dob || !email || !address || !town || !postcode || !phoneNumber || !gender || !ethnicity
             || !disability || !assistance || !emergencyName || !emergencyPhone || !emergencyRelationship) {
-            throw createHttpError(400, "Register form needs to be filled by these information")
+            throw createHttpError(400, "Register form needs to be filled by these information");
         }
 
+        // Hash the password before saving it to the database
         const passwordHashed = await bcrypt.hash(passwordRaw, 10);
 
         const newRegister = await RegisterModel.create({
             username: username,
-            password: passwordRaw,
+            password: passwordHashed,
             firstName: firstName,
             lastName: lastName,
             dob: dob,
@@ -126,6 +133,7 @@ export const createRegister: RequestHandler<unknown, unknown, CreateRegisterBody
     }
 };
 
+// Handler to delete a registration entry and send a denial email
 export const deleteRegisterWithEmail: RequestHandler = async (req, res, next) => {
     const registerId = req.params.registerId;
 
@@ -141,8 +149,8 @@ export const deleteRegisterWithEmail: RequestHandler = async (req, res, next) =>
         }
 
         const data = await transporter.sendMail({
-            "from": "miskan22@student.wintec.ac.nz",
-            "to": "miskan22@student.wintec.ac.nz",
+            "from": "xinbai24@student.wintec.ac.nz",
+            "to": "xinbai24@student.wintec.ac.nz",
             "subject": "Your Registration",
             "html": `<p>Dear ${register.firstName} ${register.lastName},<p>
             <p>We are sorry to inform you that your registration application has been denied.</p>
@@ -166,6 +174,7 @@ export const deleteRegisterWithEmail: RequestHandler = async (req, res, next) =>
     }
 };
 
+// Handler to delete a registration entry without sending an email
 export const deleteRegisterWithoutEmail: RequestHandler = async (req, res, next) => {
     const registerId = req.params.registerId;
 

@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import { signJWT, verifyJWT } from "../util/jwt.utils";
 import mongoose from "mongoose";
 
+// Configure nodemailer with SMTP settings
 const config = {
     host: env.SMTP_SERVER_ADDRESS,
     port: env.SMTP_PORT,
@@ -15,11 +16,13 @@ const config = {
         user: env.SMTP_LOGIN,
         pass: env.SMTP_PASSWORD,
     },
-    FRONTENDURL:env.FRONTENDURL
+    FRONTENDURL: env.FRONTENDURL
 };
 
+// Create a transporter object using the default SMTP transport
 const transporter = nodemailer.createTransport(config);
 
+// Handler to get the authenticated user's details
 export const getAuthenticatedUser: RequestHandler = async (req, res, next) => {
     try {
         const user = await UserModel.findById(req.session.userId).select("+email").exec();
@@ -29,6 +32,7 @@ export const getAuthenticatedUser: RequestHandler = async (req, res, next) => {
     }
 };
 
+// Interface for the request body of UserSignUp handler
 interface UserSignUpBody {
     username?: string,
     password?: string,
@@ -52,6 +56,7 @@ interface UserSignUpBody {
     role?: string,
 }
 
+// Handler to sign up a new user
 export const UserSignUp: RequestHandler<unknown, unknown, UserSignUpBody, unknown> = async (req, res, next) => {
     const username = req.body.username;
     const passwordRaw = req.body.password;
@@ -85,6 +90,7 @@ export const UserSignUp: RequestHandler<unknown, unknown, UserSignUpBody, unknow
             throw createHttpError(409, "Username already taken. Please choose a different username or log in instead");
         }
 
+        // Hash the password before saving it to the database
         const passwordHashed = await bcrypt.hash(passwordRaw, 10);
 
         const newUser = await UserModel.create({
@@ -110,12 +116,14 @@ export const UserSignUp: RequestHandler<unknown, unknown, UserSignUpBody, unknow
             role: role,
         });
 
+        // Create JWT for the new user
         const accessToken = signJWT({ email: newUser.email }, "24h");
 
         const link = `${config.FRONTENDURL}/resetpassword/${newUser._id}`;
 
+        // Send email to the new user with the account activation link
         const data = await transporter.sendMail({
-            "from": "miskan22@student.wintec.ac.nz",
+            "from": "xinbai24@student.wintec.ac.nz",
             "to": newUser.email,
             "subject": "Your Application has been approved",
             "html": `<p>Dear ${firstName}, ${lastName}<p>
@@ -137,11 +145,13 @@ export const UserSignUp: RequestHandler<unknown, unknown, UserSignUpBody, unknow
     }
 };
 
+// Interface for the request body of UserLogin handler
 interface UserLoginBody {
     username?: string,
     password?: string,
 }
 
+// Handler to log in a user
 export const UserLogin: RequestHandler<unknown, unknown, UserLoginBody, unknown> = async (req, res, next) => {
     const username = req.body.username;
     const password = req.body.password;
@@ -157,6 +167,7 @@ export const UserLogin: RequestHandler<unknown, unknown, UserLoginBody, unknown>
             throw createHttpError(401, "Username is incorrect");
         }
 
+        // Compare the provided password with the hashed password in the database
         const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (!passwordMatch) {
@@ -171,6 +182,7 @@ export const UserLogin: RequestHandler<unknown, unknown, UserLoginBody, unknown>
     }
 };
 
+// Handler to log out a user
 export const UserLogout: RequestHandler = (req, res, next) => {
     req.session.destroy(error => {
         if (error) {
@@ -178,13 +190,15 @@ export const UserLogout: RequestHandler = (req, res, next) => {
         } else {
             res.sendStatus(200);
         }
-    })
+    });
 };
 
+// Interface for the request body of ForgotPassword handler
 interface ForgotPasswordBody {
     email?: string,
 }
 
+// Handler to handle forgot password functionality
 export const ForgotPassword: RequestHandler<unknown, unknown, ForgotPasswordBody, unknown> = async (req, res, next) => {
     const email = req.body.email;
 
@@ -199,11 +213,12 @@ export const ForgotPassword: RequestHandler<unknown, unknown, ForgotPasswordBody
             throw createHttpError(404, "User not found");
         }
 
+        // Create JWT for password reset
         const accessToken = signJWT({ email: user.email }, "1h");
 
         const link = `${config.FRONTENDURL}/ForgotPasswordReceivedPage/${user._id}`;
 
-
+        // Send email to the user with the password reset link
         const data = await transporter.sendMail({
             "from":  env.SMTP_LOGIN,
             "to": user.email,
@@ -227,19 +242,21 @@ export const ForgotPassword: RequestHandler<unknown, unknown, ForgotPasswordBody
     }
 };
 
+// Interface for the request parameters of ChangePassword handler
 interface ChangePasswordParams {
     userId: string,
     accessToken: string,
 }
 
+// Interface for the request body of ChangePassword handler
 interface ChangePasswordBody {
     password?: string,
 }
 
+// Handler to change the password of a user
 export const ChangePassword: RequestHandler<ChangePasswordParams, unknown, ChangePasswordBody, unknown> = async (req, res, next) => {
     const passwordRaw = req.body.password;
     const userId = req.params.userId;
-    // const accessToken = req.params.accessToken;
 
     try {
         if (!mongoose.isValidObjectId(userId)) {
@@ -256,13 +273,7 @@ export const ChangePassword: RequestHandler<ChangePasswordParams, unknown, Chang
             throw createHttpError(400, "Parameters missing");
         }
 
-        // res.cookie("accessToken", accessToken, {
-        //     maxAge: 100 * 36000,
-        //     httpOnly: true,
-        // });
-
-        // res.send(verifyJWT(accessToken).payload);
-
+        // Hash the new password before saving it to the database
         const passwordHashed = await bcrypt.hash(passwordRaw, 10);
 
         user.password = passwordHashed;
