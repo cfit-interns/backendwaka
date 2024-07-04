@@ -58,25 +58,27 @@ interface UserSignUpBody {
 
 // Handler to sign up a new user
 export const UserSignUp: RequestHandler<unknown, unknown, UserSignUpBody, unknown> = async (req, res, next) => {
-    const username = req.body.username;
-    const passwordRaw = req.body.password;
-    const firstName = req.body.firstName;
-    const lastName = req.body.lastName;
-    const dob = req.body.dob;
-    const email = req.body.email;
-    const address = req.body.address;
-    const town = req.body.town;
-    const postcode = req.body.postcode;
-    const phoneNumber = req.body.phoneNumber;
-    const altPhoneNumber = req.body.altPhoneNumber;
-    const gender = req.body.gender;
-    const ethnicity = req.body.ethnicity;
-    const disability = req.body.disability;
-    const disabilityDetails = req.body.disabilityDetails;
-    const assistance = req.body.assistance;
-    const emergencyName = req.body.emergencyName;
-    const emergencyPhone = req.body.emergencyPhone;
-    const emergencyRelationship = req.body.emergencyRelationship;
+    const {
+        username,
+        password: passwordRaw,
+        firstName,
+        lastName,
+        dob,
+        email,
+        address,
+        town,
+        postcode,
+        phoneNumber,
+        altPhoneNumber,
+        gender,
+        ethnicity,
+        disability,
+        disabilityDetails,
+        assistance,
+        emergencyName,
+        emergencyPhone,
+        emergencyRelationship,
+    } = req.body;
     const role = "user";
 
     try {
@@ -84,62 +86,55 @@ export const UserSignUp: RequestHandler<unknown, unknown, UserSignUpBody, unknow
             throw createHttpError(400, "Parameters missing");
         }
 
-        const exisitingUsername = await UserModel.findOne({ username: username }).exec();
-
-        if (exisitingUsername) {
+        const existingUsername = await UserModel.findOne({ username }).exec();
+        if (existingUsername) {
             throw createHttpError(409, "Username already taken. Please choose a different username or log in instead");
         }
 
-        // Hash the password before saving it to the database
-        const passwordHashed = await bcrypt.hash(passwordRaw, 10);
-
         const newUser = await UserModel.create({
-            username: username,
-            password: passwordHashed,
-            firstName: firstName,
-            lastName: lastName,
-            dob: dob,
-            email: email,
-            address: address,
-            town: town,
-            postcode: postcode,
-            phoneNumber: phoneNumber,
-            altPhoneNumber: altPhoneNumber,
-            gender: gender,
-            ethnicity: ethnicity,
-            disability: disability,
-            disabilityDetails: disabilityDetails,
-            assistance: assistance,
-            emergencyName: emergencyName,
-            emergencyPhone: emergencyPhone,
-            emergencyRelationship: emergencyRelationship,
-            role: role,
+            username,
+            password: passwordRaw, // Store raw password
+            firstName,
+            lastName,
+            dob,
+            email,
+            address,
+            town,
+            postcode,
+            phoneNumber,
+            altPhoneNumber,
+            gender,
+            ethnicity,
+            disability,
+            disabilityDetails,
+            assistance,
+            emergencyName,
+            emergencyPhone,
+            emergencyRelationship,
+            role,
         });
 
-        // Create JWT for the new user
         const accessToken = signJWT({ email: newUser.email }, "24h");
-
         const link = `${config.FRONTENDURL}/resetpassword/${newUser._id}`;
 
-        // Send email to the new user with the account activation link
         const data = await transporter.sendMail({
-            "from": "xinbai24@student.wintec.ac.nz",
-            "to": newUser.email,
-            "subject": "Your Application has been approved",
-            "html": `<p>Dear ${firstName}, ${lastName}<p>
-            <p>We would love to inform you that your application with Waka Eastern Bay Community Transport has been approved.</p>
-            <p>Please click the <a href="${link}"> link</a> to activate your account.</p>
-            <p>This link will only be valid for 24 hours from the time you received this email.</p>
-            <p>Please click the "forgot password" again if the link has expired.</p>
-            <p>Ngā mihi/Kind regards.</p>
-            <p>Reneé Lubbe</p>
-            <p>Project Manager</p>
-            <p><a href="https://wakaeasternbay.org.nz">https://wakaeasternbay.org.nz</a></p>
-            <p>Waka Eastern Bay Community Transport</p>`
+            from: "xinbai24@student.wintec.ac.nz",
+            to: newUser.email,
+            subject: "Your Application has been approved",
+            html: `<p>Dear ${firstName} ${lastName},</p>
+                   <p>We would love to inform you that your application with Waka Eastern Bay Community Transport has been approved.</p>
+                   <p>Please click the <a href="${link}">link</a> to activate your account.</p>
+                   <p>This link will only be valid for 24 hours from the time you received this email.</p>
+                   <p>Please click the "forgot password" again if the link has expired.</p>
+                   <p>Ngā mihi/Kind regards,</p>
+                   <p>Reneé Lubbe</p>
+                   <p>Project Manager</p>
+                   <p><a href="https://wakaeasternbay.org.nz">https://wakaeasternbay.org.nz</a></p>
+                   <p>Waka Eastern Bay Community Transport</p>`
         });
 
         console.log("Message sent: %s", data.response);
-        res.status(201).json(accessToken);
+        res.status(201).json({ accessToken, rawPassword: passwordRaw }); // Return raw password in response
     } catch (error) {
         next(error);
     }
